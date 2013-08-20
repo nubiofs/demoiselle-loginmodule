@@ -1,0 +1,23 @@
+<?xml version='1.0' encoding="utf-8"?>
+<!DOCTYPE part PUBLIC "-//OASIS//DTD DocBook XML V4.5//EN"
+   "http://www.oasis-open.org/docbook/xml/4.5/docbookx.dtd" []>
+<part id="loginmodule-master">
+
+    <title>Demoiselle Login Module</title>
+
+    <partintro>
+        <para>
+            O componente <emphasis>Demoiselle Login Module (Authentication and Authorization Service)</emphasis> tem como objetivo
+            prover um conjunto de soluções para facilitar o desenvolvimento de rotinas baseadas em segurança na plataforma
+            Java EE. A finalidade é diminuir a complexidade na implementação de mecanismos de segurança relacionados com a
+            autenticação e a autorização de usuários.
+        </para>
+        <para>
+            Este documento descreve a configuração do componente <emphasis>Demoiselle Login Module</emphasis> no servidor de aplicação
+            JBoss 6 EAP e define um modelo de uso deste componente.
+        </para>
+    </partintro>
+
+    <!-- capítulos -->
+    <xi:include href="configuracao.xml" xmlns:xi="http://www.w3.org/2001/XInclude" />
+</part>

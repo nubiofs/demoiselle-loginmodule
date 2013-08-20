@@ -1,0 +1,138 @@
+<?xml version='1.0' encoding="utf-8"?>
+<!DOCTYPE chapter PUBLIC "-//OASIS//DTD DocBook XML V4.5//EN"
+   "http://www.oasis-open.org/docbook/xml/4.5/docbookx.dtd" []>
+<chapter id="loginmodule-configuracao">
+
+    <title>Configuração do Login Module</title>
+
+    <section>
+
+        <title>Autenticação e Autorização</title>
+
+        <para>
+            O <emphasis>Demoiselle Login Module</emphasis> define um módulo de login baseado em provedores de segurança. Esse módulo elimina
+            a necessidade do desenvolvimento de um LoginModule para cada aplicação. O desenvolvedor deve implementar um componente que atue como
+            um provedor de segurança. Esse provedor deverá ser responsável pela autenticação e autorização dos usuários de uma aplicação.
+        </para>
+
+    </section>
+
+    <section>
+
+        <title>Instalação do Login Module na máquina do desenvolvedor</title>
+
+        <para>
+            Conforme explicado anteriormente, o desenvolvedor deve construir um projeto (preferencialmente Maven) que funcione como um provedor de
+            segurança. Nesta documentação, o provedor de segurança será chamado de security-provider.
+        </para>
+
+        <para>
+            O <emphasis>Demoiselle Login Module</emphasis> é um componente
+            Maven e, portanto, deve ser adicionado como dependência
+            no arquivo pom.xml do provedor de segurança:
+        </para>
+
+        <programlisting role="JAVA"><![CDATA[<dependency>
+			<groupId>br.gov.frameworkdemoiselle.component</groupId>
+			<artifactId>demoiselle-aas</artifactId>
+			<version>1.0.0</version>
+        </dependency>]]></programlisting>
+
+        <para>
+            Dessa forma, o plug-in do Maven, instalado no Eclipse
+            ou no NetBeans, vai fazer o download do Demoiselle Login Module
+            no repositório .m2 da máquina do desenvolvedor.
+        </para>
+
+    </section>
+
+    <section>
+
+        <title>Configuração do Login Module no JBoss 6 EAP</title>
+
+        <para>
+            Considerando $JBoss a pasta de instalação do servidor JBoss 6 EAP na máquina do desenvolvedor, deve ser criada a pasta $JBoss/modules/
+            br/gov/frameworkdemoiselle/loginmodule/provider/main. Nesta pasta, devem ser incluídas as seguintes bibliotecas:
+        </para>
+
+        <para>
+            <itemizedlist>
+                <listitem>
+                    A biblioteca do <emphasis>Demoiselle Login Module</emphasis>: demoiselle-loginmodule-1.0.0.jar
+                </listitem>
+                <listitem>
+                    A biblioteca correspondente ao provedor de segurança utilizado pela aplicação. Exemplo: security-provider-0.0.1-SNAPSHOT.jar
+                </listitem>
+            </itemizedlist>
+        </para>
+
+        <para>
+            Deve ser criado o arquivo module.xml na pasta $JBoss/modules/br/gov/frameworkdemoiselle/aas/provider/main. Exemplo:
+        </para>
+
+        <programlisting role="JAVA">
+		<![CDATA[<?xml version="1.0" encoding="UTF-8"?>
+<module xmlns="urn:jboss:module:1.0" name="br.gov.frameworkdemoiselle.aas.provider">
+	<resources>
+		<resource-root path="demoiselle-aas-1.0.0.jar"/>
+    		<resource-root path="security-provider-0.0.1-SNAPSHOT.jar"/>
+	</resources>
+	<dependencies>
+                <module name="javax.api"/>
+		<module name="javax.security.jacc.api"/>
+                <module name="javax.faces.api"/>
+		<module name="org.apache.log4j"/>
+    		<module name="br.gov.serpro.mainframe"/>
+  	</dependencies>
+</module>]]></programlisting>
+
+        <para>
+            Deve ser adicionado um domínio de segurança da aplicação em $JBoss/standalone/configuration/standalone.xml no subsistema
+            urn:jboss:domain:security:
+        </para>
+
+        <programlisting role="JAVA">
+		<![CDATA[<security-domain name="demoiselle-aas-domain" cache-type="default">
+                    <authentication>
+                        <login-module code="br.gov.frameworkdemoiselle.aas.provider.ProviderLoginModule" flag="sufficient" module="br.gov.frameworkdemoiselle.aas.provider">
+                            <module-option name="authentication-provider-class" value="br.gov.serpro.security.provider.AuthenticationProvider"/>
+                            <module-option name="authorization-provider-class" value="br.gov.serpro.security.provider.AuthorizationProvider"/>
+			    <module-option name="throwable-handler-class" value="br.gov.frameworkdemoiselle.aas.message.implementation.RequestThrowableHandler"/>
+                        </login-module>
+                    </authentication>
+                    <jsse keystore-password="123456" keystore-url="file:/home/08100712743/Instalados/jboss-eap-6.0 Original/standalone/configuration/keystore-tibco.jks" truststore-password="changeit" truststore-url="file:/home/08100712743/Instalados/jboss-eap-6.0 Original/standalone/configuration/truststore.jks"/>
+                </security-domain>]]></programlisting>
+
+    </section>
+
+    <section>
+
+        <title>Referência do AAS nas aplicações</title>
+
+        <para>
+            As apliçações utilizam o
+            <emphasis>Demoiselle AAS</emphasis> e o
+            provedor de segurança em tempo de execução e,
+            portanto, deve ser criado o arquivo src/main/
+            webapp/WEB-INF/jboss-deployment-structure.xml
+            nas aplicações:
+        </para>
+
+        <programlisting role="JAVA">
+		<![CDATA[<jboss-deployment-structure>
+	<deployment>
+		<dependencies>
+			<module name="br.gov.frameworkdemoiselle.aas.provider" slot="main"/>
+		</dependencies>
+	</deployment>
+</jboss-deployment-structure>]]></programlisting>
+
+    </section>
+
+    <section>
+
+        <title>Modelo de uso do AAS nas aplicações</title>
+
+    </section>
+
+</chapter>
