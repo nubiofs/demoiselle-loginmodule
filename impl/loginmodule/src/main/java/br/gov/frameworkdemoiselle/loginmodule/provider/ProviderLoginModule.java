@@ -4,6 +4,7 @@ import java.security.Principal;
 import java.security.cert.X509Certificate;
 import java.util.Collection;
 import java.util.Map;
+import java.util.Properties;
 
 import javax.security.auth.Subject;
 import javax.security.auth.callback.Callback;
@@ -13,6 +14,9 @@ import javax.security.auth.callback.PasswordCallback;
 import javax.security.auth.login.LoginException;
 import javax.security.auth.spi.LoginModule;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import br.gov.frameworkdemoiselle.loginmodule.AuthException;
 import br.gov.frameworkdemoiselle.loginmodule.JACCRequestUtil;
 import br.gov.frameworkdemoiselle.loginmodule.Role;
@@ -20,193 +24,255 @@ import br.gov.frameworkdemoiselle.loginmodule.SimpleGroup;
 import br.gov.frameworkdemoiselle.loginmodule.message.IThrowableHandler;
 
 public class ProviderLoginModule implements LoginModule {
+	private static final String OPTION_AUTHENTICATION_PROVIDER_CLASS = "authentication-provider-class";
+	private static final String OPTION_AUTHORIZATION_PROVIDER_CLASS = "authorization-provider-class";
+	private static final String OPTION_THROWABLE_HANDLER_CLASS = "throwable-handler-class";
+	private static final String STATE_LOGIN_NAME = "javax.security.auth.login.name";
+	private static final String STATE_LOGIN_PASSWORD = "javax.security.auth.login.password";
+	private static final String STATE_LOGIN_CERTIFICATE = "javax.security.auth.login.certificate";
+	public static final String USERNAME = "username";
+	public static final String PASSWORD = "password";
+	public static final String NEW_PASSWORD = "newPassword";
+	public static final String X509 = "X509";
+	public static final String USER_PASSWORD = "username-password";
+	public static final String CLIENT_CERTIFICATE = "client-certificate";
+	private Subject subject;
+	private CallbackHandler callbackHandler;
+	private Map<String, Object> sharedState;
+	private Map<String, Object> options;
+	private IAuthenticationProvider authentication;
+	private IAuthorizationProvider authorization;
+	private IThrowableHandler throwableHandler;
+	private Principal callerPrincipal;
+	private Properties publicOptions;
+	
+	private Logger logger;
 
-    private static final String OPTION_AUTHENTICATION_PROVIDER_CLASS = "authentication-provider-class";
-    private static final String OPTION_AUTHORIZATION_PROVIDER_CLASS = "authorization-provider-class";
-    private static final String OPTION_THROWABLE_HANDLER_CLASS = "throwable-handler-class";
-    private static final String STATE_LOGIN_NAME = "javax.security.auth.login.name";
-    private static final String STATE_LOGIN_PASSWORD = "javax.security.auth.login.password";
-    private static final String STATE_LOGIN_CERTIFICATE = "javax.security.auth.login.certificate";
-    public static final String USERNAME = "username";
-    public static final String PASSWORD = "password";
-    public static final String NEW_PASSWORD = "newPassword";
-    public static final String X509 = "X509";
-    public static final String USER_PASSWORD = "username-password";
-    public static final String CLIENT_CERTIFICATE = "client-certificate";
-    private Subject subject;
-    private CallbackHandler callbackHandler;
-    private Map<String, Object> sharedState;
-    private Map<String, Object> options;
-    private IAuthenticationProvider authentication;
-    private IAuthorizationProvider authorization;
-    private IThrowableHandler throwableHandler;
-    private Principal callerPrincipal;
+	public void initialize(Subject subject, CallbackHandler callbackHandler,
+			Map sharedState, Map options) {
+		
+		this.logger = LoggerFactory.getLogger(ProviderLoginModule.class);
+		
+		logger.info("initialize");
+		
+		this.subject = subject;
+		this.callbackHandler = callbackHandler;
+		this.sharedState = sharedState;
+		this.options = options;
 
-    public void initialize(Subject subject, CallbackHandler callbackHandler, Map sharedState, Map options) {
-        this.subject = subject;
-        this.callbackHandler = callbackHandler;
-        this.sharedState = sharedState;
-        this.options = options;
+		processOptions();
+	}
 
-        processOptions();
-    }
+	public boolean login() throws LoginException {
+		logger.info("login");
 
-    public boolean login() throws LoginException {
-        NameCallback nc = new NameCallback("Authentication type: ");
+		NameCallback nc = new NameCallback("Authentication type: ");
 
-        PasswordCallback pc = new PasswordCallback("Password: ", false);
+		PasswordCallback pc = new PasswordCallback("Password: ", false);
 
-        Callback[] callbacks = new Callback[]{nc, pc};
+		Callback[] callbacks = new Callback[] { nc, pc };
 
-        try {
-            callbackHandler.handle(callbacks);
+		try {
+			callbackHandler.handle(callbacks);
 
-            System.out.println(nc.getName());
-        } catch (Exception e) {
-            throw new RuntimeException("Error on Callback Handle", e);
-        }
+		} catch (Exception e) {
+			logger.error("Error on Callback Handle : " + e.getMessage());
 
-        JACCRequestUtil requestUtil = new JACCRequestUtil();
+			throw new RuntimeException("Error on Callback Handle", e);
+		}
 
-        if (nc.getName().equals(USER_PASSWORD)) {
-            String username = (String) requestUtil.getRequest().getAttribute(USERNAME);
+		JACCRequestUtil requestUtil = new JACCRequestUtil();
 
-            String password = (String) requestUtil.getRequest().getAttribute(PASSWORD);
+		if (nc.getName().equals(USER_PASSWORD)) {
+			String username = (String) requestUtil.getRequest().getAttribute(
+					USERNAME);
 
-            String newPassword = (String) requestUtil.getRequest().getAttribute(NEW_PASSWORD);
+			String password = (String) requestUtil.getRequest().getAttribute(
+					PASSWORD);
 
-            authentication.initialize(null);
+			String newPassword = (String) requestUtil.getRequest()
+					.getAttribute(NEW_PASSWORD);
 
-            try {
-                if (newPassword.trim().length() == 0) {
-                    callerPrincipal = authentication.authenticate(username, password);
-                } else {
-                    callerPrincipal = authentication.authenticate(username, password, newPassword);
-                }
-            } catch (Throwable t) {
-                throwableHandler.handle(t);
-            }
+			authentication.initialize(publicOptions);
 
-            if (callerPrincipal != null && !(callerPrincipal instanceof Error)) {
-                sharedState.put(STATE_LOGIN_NAME, username);
-                sharedState.put(STATE_LOGIN_PASSWORD, password);
+			try {
+				if (newPassword.trim().length() == 0) {
+					callerPrincipal = authentication.authenticate(username,
+							password);
+				} else {
+					callerPrincipal = authentication.authenticate(username,
+							password, newPassword);
+				}
+			} catch (Throwable t) {
+				throwableHandler.handle(t);
+			}
 
-                return true;
-            } else {
-                return false;
-            }
-        } else if (nc.getName().equals(CLIENT_CERTIFICATE)) {
-            X509Certificate cert = (X509Certificate) requestUtil.getRequest().getAttribute(X509);
+			if (callerPrincipal != null && !(callerPrincipal instanceof Error)) {
+				sharedState.put(STATE_LOGIN_NAME, username);
+				sharedState.put(STATE_LOGIN_PASSWORD, password);
 
-            authentication.initialize(null);
+				return true;
+			} else {
+				return false;
+			}
+		} else if (nc.getName().equals(CLIENT_CERTIFICATE)) {
+			X509Certificate cert = (X509Certificate) requestUtil.getRequest()
+					.getAttribute(X509);
 
-            try {
-                callerPrincipal = authentication.authenticate(cert);
-            } catch (Throwable t) {
-                throwableHandler.handle(t);
-            }
+			authentication.initialize(publicOptions);
 
-            if (callerPrincipal != null) {
-                sharedState.put(STATE_LOGIN_CERTIFICATE, cert);
+			try {
+				callerPrincipal = authentication.authenticate(cert);
+			} catch (Throwable t) {
+				throwableHandler.handle(t);
+			}
 
-                return true;
-            } else {
-                return false;
-            }
-        } else {
-            throw new AuthException("Authentication type " + nc.getName() + " is invalid.");
-        }
-    }
+			if (callerPrincipal != null) {
+				sharedState.put(STATE_LOGIN_CERTIFICATE, cert);
 
-    public boolean logout() throws LoginException {
-        System.out.println("Logout");
+				return true;
+			} else {
+				return false;
+			}
+		} else {
+			throw new AuthException("Authentication type " + nc.getName()
+					+ " is invalid.");
+		}
+	}
 
-        JACCRequestUtil requestUtil = new JACCRequestUtil();
+	public boolean logout() throws LoginException {
+		logger.info("logout");
+		
+		JACCRequestUtil requestUtil = new JACCRequestUtil();
 
-        requestUtil.getRequest().getSession().invalidate();
+		requestUtil.getRequest().getSession().invalidate();
 
-        return true;
-    }
+		return true;
+	}
 
-    public boolean commit() throws LoginException {
-        System.out.println("Commit");
+	public boolean commit() throws LoginException {
+		logger.info("commit");
+		
+		SimpleGroup callerPrincipalGroup;
+		SimpleGroup roleGroup;
+		Collection<Role> roles;
 
-        SimpleGroup callerPrincipalGroup;
-        SimpleGroup roleGroup;
-        Collection<Role> roles;
+		authorization.initialize(publicOptions);
 
-        authorization.initialize(null);
+		roles = authorization.authorize(callerPrincipal);
 
-        roles = authorization.authorize(callerPrincipal);
+		callerPrincipalGroup = new SimpleGroup("CallerPrincipal");
 
-        callerPrincipalGroup = new SimpleGroup("CallerPrincipal");
+		callerPrincipalGroup.addMember(callerPrincipal);
 
-        callerPrincipalGroup.addMember(callerPrincipal);
+		subject.getPrincipals().add(callerPrincipalGroup);
 
-        subject.getPrincipals().add(callerPrincipalGroup);
+		roleGroup = new SimpleGroup("Roles");
 
-        roleGroup = new SimpleGroup("Roles");
+		for (Role role : roles) {
+			roleGroup.addMember(role);
+		}
 
-        for (Role role : roles) {
-            roleGroup.addMember(role);
-        }
+		subject.getPrincipals().add(roleGroup);
 
-        subject.getPrincipals().add(roleGroup);
+		return true;
+	}
 
-        return true;
-    }
+	public boolean abort() throws LoginException {
+		logger.info("abort");
+		
+		return true;
+	}
 
-    public boolean abort() throws LoginException {
-        System.out.println("Abort");
+	private void processOptions() {
+		logger.info("Processing options");
 
-        return true;
-    }
+		// OPTION_AUTHENTICATION_PROVIDER_CLASS
+		String optionAuthenticationClass = (String) options
+				.get(OPTION_AUTHENTICATION_PROVIDER_CLASS);
 
-    private void processOptions() {
-        System.out.println("Processing options");
+		logger.info("Processing options: " + OPTION_AUTHENTICATION_PROVIDER_CLASS + " - " + optionAuthenticationClass);
+		if (optionAuthenticationClass == null) {
+			throw new AuthException("Option "
+					+ OPTION_AUTHENTICATION_PROVIDER_CLASS + " not found");
+		}
 
-        // OPTION_AUTHENTICATION_PROVIDER_CLASS
-        String optionAthenticationClass = (String) options.get(OPTION_AUTHENTICATION_PROVIDER_CLASS);
+		try {
+			Class<IAuthenticationProvider> clazz = (Class<IAuthenticationProvider>) Class
+					.forName(optionAuthenticationClass);
+			authentication = clazz.newInstance();
+		} catch (Exception e) {
+			throw new AuthException("Invalid value of option "
+					+ OPTION_AUTHENTICATION_PROVIDER_CLASS, e);
+		}
 
-        if (optionAthenticationClass == null) {
-            throw new AuthException("Option " + OPTION_AUTHENTICATION_PROVIDER_CLASS + " not found");
-        }
 
-        try {
-            Class<IAuthenticationProvider> clazz = (Class<IAuthenticationProvider>) Class.forName(optionAthenticationClass);
-            authentication = clazz.newInstance();
-        } catch (Exception e) {
-            throw new AuthException("Invalid value of option " + OPTION_AUTHENTICATION_PROVIDER_CLASS, e);
-        }
+		// OPTION_AUTHORIZATION_PROVIDER_CLASS
 
-        // OPTION_AUTHORIZATION_PROVIDER_CLASS
-        String optionAthorizationClass = (String) options.get(OPTION_AUTHORIZATION_PROVIDER_CLASS);
+		String optionAthorizationClass = (String) options
+				.get(OPTION_AUTHORIZATION_PROVIDER_CLASS);		
+		logger.info("Processing options: " + OPTION_AUTHORIZATION_PROVIDER_CLASS + " - " + optionAthorizationClass);
+		
+		if (optionAthorizationClass.equals(optionAuthenticationClass)) {
+			if (authentication instanceof IAuthorizationProvider) {
+				authorization = (IAuthorizationProvider) authentication;
+			} else {
+				throw new AuthException("Class [" + OPTION_AUTHORIZATION_PROVIDER_CLASS + "] does not implements IAuthorizationProvider");
+			}			
+		} else {
+			if (optionAthorizationClass == null) {
+				throw new AuthException("Option "+OPTION_AUTHORIZATION_PROVIDER_CLASS+" not found");
+			}
+			try {
+		 		Class<IAuthorizationProvider> clazz = (Class<IAuthorizationProvider>) Class.forName(optionAthorizationClass);
+		 		authorization = clazz.newInstance();
+		 	} catch (Exception e) {
+		 		throw new AuthException("Invalid value of option "+OPTION_AUTHORIZATION_PROVIDER_CLASS, e);
+		 	}
+		 }
+		
+		
+		// OPTION_THROWABLE_HANDLER_CLASS
+		String optionThrowableHandlerClass = (String) options
+				.get(OPTION_THROWABLE_HANDLER_CLASS);
+		
+		logger.info("Processing options: " + OPTION_THROWABLE_HANDLER_CLASS + " - " + optionThrowableHandlerClass);
+		if (optionThrowableHandlerClass == null) {
+			throw new AuthException("Option " + OPTION_THROWABLE_HANDLER_CLASS
+					+ " not found");
+		}
 
-        if (optionAthorizationClass == null) {
-            throw new AuthException("Option " + OPTION_AUTHORIZATION_PROVIDER_CLASS + " not found");
-        }
+		if (optionThrowableHandlerClass != null) {
+			try {
+				Class<IThrowableHandler> clazz = (Class<IThrowableHandler>) Class
+						.forName(optionThrowableHandlerClass);
+				throwableHandler = clazz.newInstance();
+			} catch (Exception e) {
+				throw new AuthException("Invalid value of option "
+						+ OPTION_THROWABLE_HANDLER_CLASS, e);
+			}
+		}
+		createPublicOptions();
+	}
 
-        try {
-            Class<IAuthorizationProvider> clazz = (Class<IAuthorizationProvider>) Class.forName(optionAthorizationClass);
-            authorization = clazz.newInstance();
-        } catch (Exception e) {
-            throw new AuthException("Invalid value of option " + OPTION_AUTHORIZATION_PROVIDER_CLASS, e);
-        }
+	/**
+	 * Remove Provider Login Module options of public options
+	 */
+	private void createPublicOptions() {
+		logger.info("create public options");
 
-        //OPTION_THROWABLE_HANDLER_CLASS
-        String optionThrowableHandlerClass = (String) options.get(OPTION_THROWABLE_HANDLER_CLASS);
+		publicOptions = new Properties();
+		for (String key : options.keySet()) {
+			if (key.equals(OPTION_AUTHENTICATION_PROVIDER_CLASS))
+				continue;
+			if (key.equals(OPTION_AUTHORIZATION_PROVIDER_CLASS))
+				continue;
+			if (key.equals(OPTION_THROWABLE_HANDLER_CLASS))
+				continue;
 
-        if (optionThrowableHandlerClass == null) {
-            throw new AuthException("Option " + OPTION_THROWABLE_HANDLER_CLASS + " not found");
-        }
+			logger.info("Processing options: " + key + " - " + options.get(key));
 
-        if (optionThrowableHandlerClass != null) {
-            try {
-                Class<IThrowableHandler> clazz = (Class<IThrowableHandler>) Class.forName(optionThrowableHandlerClass);
-                throwableHandler = clazz.newInstance();
-            } catch (Exception e) {
-                throw new AuthException("Invalid value of option " + OPTION_THROWABLE_HANDLER_CLASS, e);
-            }
-        }
-    }
+			publicOptions.put(key, options.get(key));
+		}
+	}
 }

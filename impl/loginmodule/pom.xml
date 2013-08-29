@@ -60,18 +60,17 @@
         </dependency>
 
         <dependency>
-            <groupId>log4j</groupId>
-            <artifactId>log4j</artifactId>
-            <version>1.2.14</version>
-        </dependency>
-
-        <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
             <version>4.5</version>
             <scope>test</scope>
         </dependency>
-
+		<dependency>
+			<groupId>org.slf4j</groupId>
+			<artifactId>slf4j-api</artifactId>
+			<version>1.6.1</version>
+			<scope>provided</scope>
+		</dependency>
     </dependencies>
 
     <distributionManagement>
@@ -256,39 +255,6 @@
                         <phase>verify</phase>
                         <goals>
                             <goal>jar</goal>
-                        </goals>
-                    </execution>
-                </executions>
-            </plugin>
-            <plugin>
-                <groupId>br.gov.serpro.community</groupId>
-                <artifactId>community-maven-plugin</artifactId>
-                <version>1.0.1-SNAPSHOT</version>
-                <configuration>
-                    <aboutFile>${project.build.directory}/site/index.html</aboutFile>
-                    <releaseNotesFile>${project.build.directory}/site/release-notes.html</releaseNotesFile>
-                    <!--
-                   <imagePath>/home/08100712743/Projetos/JBoss 6 EAP/src/site/resources/images/avata.png</imagePath>
-                    -->
-                    <inputEncoding>${encoding.default}</inputEncoding>
-                    <links>
-                        <link>SERPRO|http://www.serpro.gov.br</link>
-                    </links>
-                    <categories>
-                        <category>java</category>
-                        <category>componente</category>
-                        <category>baixa</category>
-                        <!--
-                                lista de categorias <category>baixa</category> <category>alta</category> <category>outras</category> <category>cobol</category> <category>natural</category> <category>c</category> <category>.net</category> <category>java</category> <category>rfb</category> <category>siape</category> <category>siscomex</category> <category>siafi</category> <category>proprietary</category> <category>freeware</category> <category>open-source</category> <category>framework</category> <category>aplicacao</category> <category>servico</category> <category>componente</category> <category>plataforma</category> <category>linguagem</category> <category>dominio</category> <category>negocio</category> <category>licenca</category>
-                                <category>produto</category> <category>tecnica</category>
-                        -->
-                    </categories>
-                </configuration>
-                <executions>
-                    <execution>
-                        <phase>site</phase>
-                        <goals>
-                            <goal>deploy-community</goal>
                         </goals>
                     </execution>
                 </executions>

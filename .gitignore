@@ -1,1 +1,4 @@
 target/
+impl/loginmodule/.classpath
+impl/loginmodule/.settings/
+impl/loginmodule/.project

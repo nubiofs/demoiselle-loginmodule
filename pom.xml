@@ -97,6 +97,11 @@
             <name>Sonatype Nexus Snapshots</name>
             <url>https://oss.sonatype.org/content/repositories/snapshots</url>
         </repository>
+	<repository>
+            <id>demoiselle-release</id>
+            <name>Demoiselle Releases</name>
+ 	    <url>http://demoiselle.sourceforge.net/repository/release</url>
+	</repository>
     </repositories>
 
     <properties>
