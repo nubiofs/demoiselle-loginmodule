@@ -175,6 +175,8 @@ public class ProviderLoginModule implements LoginModule {
 
 		subject.getPrincipals().add(roleGroup);
 
+		logger.info("commit: roles add: " + roles.size());
+
 		return true;
 	}
 

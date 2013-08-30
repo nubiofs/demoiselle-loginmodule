@@ -8,6 +8,9 @@ import javax.faces.context.FacesContext;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import br.gov.frameworkdemoiselle.loginmodule.message.implementation.RequestThrowableHandler;
 import br.gov.frameworkdemoiselle.loginmodule.provider.ProviderLoginModule;
 
@@ -20,13 +23,22 @@ public class LoginMB {
     private String errorPageRedirect;
     private static final String CERTIFICATES_ATTR = "javax.servlet.request.X509Certificate";
 
+    private Logger logger;
+    
+    public LoginMB() {
+		logger = LoggerFactory.getLogger(LoginMB.class);
+		logger.info("Iniciando o LoginMB");
+	}
+    
     public void onPageLoad() {
-        System.out.println("Entrou no método onPageLoad.");
+    	logger.info("Direcionando para autenticacao com certificado digital");
 
         authenticateClientCertificate();
     }
 
     public String autenticateUsernamePassword() {
+    	logger.info("autenticateUsernamePassword");
+
         HttpServletRequest request = (HttpServletRequest) FacesContext.getCurrentInstance().getExternalContext().getRequest();
 
         request.setAttribute(ProviderLoginModule.USERNAME, username);
@@ -55,6 +67,7 @@ public class LoginMB {
     }
 
     public void authenticateClientCertificate() {
+    	logger.info("authenticateClientCertificate");
         FacesContext context = FacesContext.getCurrentInstance();
 
         HttpServletRequest request = (HttpServletRequest) context.getExternalContext().getRequest();
@@ -68,7 +81,9 @@ public class LoginMB {
 
             try {
                 request.login(ProviderLoginModule.CLIENT_CERTIFICATE, null);
-
+                
+                logger.info("Login efetuado com sucesso, redirecionando para: " + successPageRedirect);
+                
                 context.getApplication().getNavigationHandler().handleNavigation(context, null, successPageRedirect);
             } catch (ServletException e) {
                 e.printStackTrace();
@@ -93,6 +108,8 @@ public class LoginMB {
     }
 
     public String logout() {
+    	logger.info("logout");
+
         HttpServletRequest request = (HttpServletRequest) FacesContext.getCurrentInstance().getExternalContext().getRequest();
 
         FacesMessage message;
@@ -113,6 +130,8 @@ public class LoginMB {
     }
 
     public String getUserPrincipalName() {
+    	logger.info("getUserPrincipalName");
+
         HttpServletRequest request = (HttpServletRequest) FacesContext.getCurrentInstance().getExternalContext().getRequest();
 
         Principal principal = request.getUserPrincipal();
