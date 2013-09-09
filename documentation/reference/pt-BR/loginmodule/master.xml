@@ -7,14 +7,14 @@
 
     <partintro>
         <para>
-            O componente <emphasis>Demoiselle Login Module (Authentication and Authorization Service)</emphasis> tem como objetivo
-            prover um conjunto de soluções para facilitar o desenvolvimento de rotinas baseadas em segurança na plataforma
-            Java EE. A finalidade é diminuir a complexidade na implementação de mecanismos de segurança relacionados com a
-            autenticação e a autorização de usuários.
+            O componente <emphasis>Demoiselle Login Module</emphasis> tem como objetivo prover um conjunto de soluções para
+            facilitar o desenvolvimento de rotinas baseadas em segurança na plataforma Java EE. A finalidade é diminuir a
+            complexidade na implementação de mecanismos de segurança relacionados com a autenticação e a autorização de usuários.
         </para>
         <para>
-            Este documento descreve a configuração do componente <emphasis>Demoiselle Login Module</emphasis> no servidor de aplicação
-            JBoss 6 EAP e define um modelo de uso deste componente.
+            Este documento explica como configurar o componente <emphasis>Demoiselle Login Module</emphasis> no servidor
+            de aplicações JBoss 6 EAP, e como configurar as aplicações para o uso do componente <emphasis>Demoiselle
+            Login Module</emphasis>.
         </para>
     </partintro>
 
